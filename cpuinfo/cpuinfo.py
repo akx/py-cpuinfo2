@@ -1595,7 +1595,7 @@ def _get_cpu_info_from_cpuid():
 			import json
 			from subprocess import check_output, DEVNULL, CalledProcessError
 
-			command = [sys.executable, __file__, '--internal-cpuid']
+			command = [sys.executable, "-m", "cpuinfo", '--internal-cpuid']
 			try:
 				stdout = check_output(command, stdin=DEVNULL, stderr=DEVNULL)
 			except CalledProcessError:
@@ -2671,72 +2671,10 @@ def get_cpu_info():
 
 	return _get_cpu_info_internal()
 
-def main():
-	from argparse import ArgumentParser, SUPPRESS
-	import json
-
-	# Parse args
-	parser = ArgumentParser(description='Gets CPU info with pure Python')
-	parser.add_argument('--json', action='store_true', help='Return the info in JSON format')
-	parser.add_argument('--version', action='store_true', help='Return the version of py-cpuinfo')
-	parser.add_argument('--trace', action='store_true', help='Traces code paths used to find CPU info to file')
-	parser.add_argument('--internal-cpuid', action='store_true', help=SUPPRESS)
-	args = parser.parse_args()
-
+def _configure_trace(is_active):
 	global g_trace
-	g_trace = Trace(args.trace, False)
+	g_trace = Trace(is_active, False)
 
-	# Internal: run CPUID in isolation and return JSON result
-	if args.internal_cpuid:
-		output = _get_cpu_info_from_cpuid_actual()
-		print(json.dumps(output))
-		return
-
-	try:
-		_check_arch()
-	except Exception as err:
-		sys.stderr.write(str(err) + "\n")
-		sys.exit(1)
-
-	info = _get_cpu_info_internal()
-
-	if not info:
-		sys.stderr.write("Failed to find cpu info\n")
-		sys.exit(1)
-
-	if args.json:
-		print(json.dumps(info))
-	elif args.version:
-		print(CPUINFO_VERSION_STRING)
-	else:
-		print('Python Version: {0}'.format(info.get('python_version', '')))
-		print('Cpuinfo Version: {0}'.format(info.get('cpuinfo_version_string', '')))
-		print('Vendor ID Raw: {0}'.format(info.get('vendor_id_raw', '')))
-		print('Hardware Raw: {0}'.format(info.get('hardware_raw', '')))
-		print('Brand Raw: {0}'.format(info.get('brand_raw', '')))
-		print('Hz Advertised Friendly: {0}'.format(info.get('hz_advertised_friendly', '')))
-		print('Hz Actual Friendly: {0}'.format(info.get('hz_actual_friendly', '')))
-		print('Hz Advertised: {0}'.format(info.get('hz_advertised', '')))
-		print('Hz Actual: {0}'.format(info.get('hz_actual', '')))
-		print('Arch: {0}'.format(info.get('arch', '')))
-		print('Bits: {0}'.format(info.get('bits', '')))
-		print('Count: {0}'.format(info.get('count', '')))
-		print('Arch String Raw: {0}'.format(info.get('arch_string_raw', '')))
-		print('L1 Data Cache Size: {0}'.format(info.get('l1_data_cache_size', '')))
-		print('L1 Instruction Cache Size: {0}'.format(info.get('l1_instruction_cache_size', '')))
-		print('L2 Cache Size: {0}'.format(info.get('l2_cache_size', '')))
-		print('L2 Cache Line Size: {0}'.format(info.get('l2_cache_line_size', '')))
-		print('L2 Cache Associativity: {0}'.format(info.get('l2_cache_associativity', '')))
-		print('L3 Cache Size: {0}'.format(info.get('l3_cache_size', '')))
-		print('Stepping: {0}'.format(info.get('stepping', '')))
-		print('Model: {0}'.format(info.get('model', '')))
-		print('Family: {0}'.format(info.get('family', '')))
-		print('Processor Type: {0}'.format(info.get('processor_type', '')))
-		print('Flags: {0}'.format(', '.join(info.get('flags', ''))))
-
-
-if __name__ == '__main__':
-	main()
-else:
-	g_trace = Trace(False, False)
+if __name__ != '__main__':
+	_configure_trace(False)
 	_check_arch()

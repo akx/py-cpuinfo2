@@ -82,13 +82,6 @@ results or garbage. So it would be a bad idea to rely on them.
 | "arch_string_raw"             | "x86_64"                  | string                |
 
 
-
-Run as a script
------
-~~~bash
-$ python cpuinfo/cpuinfo.py
-~~~
-
 Run as a module
 -----
 ~~~bash
