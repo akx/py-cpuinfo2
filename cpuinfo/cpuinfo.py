@@ -275,7 +275,10 @@ class DataSource:
 
 def _run_and_get_stdout(command):
 	g_trace.command_header(f'Running command {command}')
-	result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, text=True)
+	kwargs = {}
+	if sys.platform == 'win32':
+		kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+	result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, text=True, **kwargs)
 	g_trace.command_output('return code:', str(result.returncode))
 	g_trace.command_output('stdout:', result.stdout)
 	return result.returncode, result.stdout
@@ -1559,7 +1562,10 @@ def _get_cpu_info_from_cpuid():
 
 			command = [sys.executable, "-m", "cpuinfo", '--internal-cpuid']
 			try:
-				stdout = subprocess.check_output(command, stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+				kwargs = {}
+				if sys.platform == 'win32':
+					kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+				stdout = subprocess.check_output(command, stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kwargs)
 			except subprocess.CalledProcessError:
 				g_trace.fail('Failed to run CPUID in process. Skipping ...')
 				return {}
