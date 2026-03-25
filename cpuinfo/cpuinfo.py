@@ -8,6 +8,7 @@ import io
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -137,7 +138,8 @@ g_trace = Trace(is_active=False)
 class DataSource:
 	bits = platform.architecture()[0]
 	cpu_count = os.cpu_count()
-	is_windows = platform.system().lower() == 'windows'
+	_system_lower = platform.system().lower()
+	is_windows = _system_lower == 'windows'
 	arch_string_raw = platform.machine()
 	uname_string_raw = platform.uname()[5]
 	can_cpuid = True
@@ -148,46 +150,44 @@ class DataSource:
 
 	@staticmethod
 	def has_dmesg():
-		return len(_program_paths('dmesg')) > 0
+		return shutil.which('dmesg') is not None
 
 	@staticmethod
 	def has_var_run_dmesg_boot():
-		uname = platform.system().strip().strip('"').strip("'").strip().lower()
-		return 'linux' in uname and os.path.exists('/var/run/dmesg.boot')
+		return 'linux' in DataSource._system_lower and os.path.exists('/var/run/dmesg.boot')
 
 	@staticmethod
 	def has_cpufreq_info():
-		return len(_program_paths('cpufreq-info')) > 0
+		return shutil.which('cpufreq-info') is not None
 
 	@staticmethod
 	def has_sestatus():
-		return len(_program_paths('sestatus')) > 0
+		return shutil.which('sestatus') is not None
 
 	@staticmethod
 	def has_sysctl():
-		return len(_program_paths('sysctl')) > 0
+		return shutil.which('sysctl') is not None
 
 	@staticmethod
 	def has_isainfo():
-		return len(_program_paths('isainfo')) > 0
+		return shutil.which('isainfo') is not None
 
 	@staticmethod
 	def has_kstat():
-		return len(_program_paths('kstat')) > 0
+		return shutil.which('kstat') is not None
 
 	@staticmethod
 	def has_sysinfo():
-		uname = platform.system().strip().strip('"').strip("'").strip().lower()
-		is_beos = 'beos' in uname or 'haiku' in uname
-		return is_beos and len(_program_paths('sysinfo')) > 0
+		system_lower = DataSource._system_lower
+		return ('beos' in system_lower or 'haiku' in system_lower) and shutil.which('sysinfo') is not None
 
 	@staticmethod
 	def has_lscpu():
-		return len(_program_paths('lscpu')) > 0
+		return shutil.which('lscpu') is not None
 
 	@staticmethod
 	def has_ibm_pa_features():
-		return len(_program_paths('lsprop')) > 0
+		return shutil.which('lsprop') is not None
 
 	@staticmethod
 	def has_wmic():
@@ -273,19 +273,6 @@ class DataSource:
 		return feature_bits
 
 
-def _program_paths(program_name):
-	paths = []
-	exts = filter(None, os.environ.get('PATHEXT', '').split(os.pathsep))
-	for p in os.environ['PATH'].split(os.pathsep):
-		p = os.path.join(p, program_name)
-		if os.access(p, os.X_OK):
-			paths.append(p)
-		for e in exts:
-			pext = p + e
-			if os.access(pext, os.X_OK):
-				paths.append(pext)
-	return paths
-
 def _run_and_get_stdout(command):
 	g_trace.command_header(f'Running command {command}')
 	result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, text=True)
@@ -296,7 +283,7 @@ def _run_and_get_stdout(command):
 def _read_file(path):
 	g_trace.command_header(f'Reading file {path}')
 	try:
-		with open(path, 'r', encoding='UTF-8', errors='replace') as f:
+		with open(path, encoding='UTF-8', errors='replace') as f:
 			content = f.read()
 		g_trace.command_output('length:', str(len(content)))
 		return 0, content
@@ -309,10 +296,10 @@ def _read_windows_registry_key(key_name, field_name):
 
 	try:
 		import _winreg as winreg  # noqa: PLC0415
-	except ImportError as err:
+	except ImportError:
 		try:
 			import winreg  # noqa: PLC0415
-		except ImportError as err:
+		except ImportError:
 			pass
 
 	key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
@@ -324,16 +311,20 @@ def _read_windows_registry_key(key_name, field_name):
 # Make sure we are running on a supported system
 def _check_arch():
 	arch, bits = _parse_arch(DataSource.arch_string_raw)
-	if not arch in ['ARM_7', 'ARM_8',
-	                'LOONG_32', 'LOONG_64',
-	                'MIPS_32', 'MIPS_64',
-	                'PPC_32', 'PPC_64',
-	                'RISCV_32', 'RISCV_64',
-	                'SPARC_32', 'SPARC_64',
-	                'S390X',
-	                'X86_32', 'X86_64']:
-		raise Exception("py-cpuinfo currently only works on X86 "
-		                "and some ARM/LoongArch/MIPS/PPC/RISCV/SPARC/S390X CPUs.")
+	if arch not in [
+		'ARM_7', 'ARM_8',
+		'LOONG_32', 'LOONG_64',
+		'MIPS_32', 'MIPS_64',
+		'PPC_32', 'PPC_64',
+		'RISCV_32', 'RISCV_64',
+		'SPARC_32', 'SPARC_64',
+		'S390X',
+		'X86_32', 'X86_64',
+	]:
+		raise Exception(
+			"py-cpuinfo currently only works on X86 and some ARM/LoongArch/MIPS/PPC/RISCV/SPARC/S390X CPUs; "
+			f"we detected {arch!r}, {bits} bits."
+		)
 
 
 def _utf_to_str(input):
@@ -403,29 +394,28 @@ def _get_field(cant_be_number, raw_string, convert_to, default_value, *field_nam
 def _to_decimal_string(ticks):
 	try:
 		# Convert to string
-		ticks = '{0}'.format(ticks)
+		ticks = str(ticks)
 		# Sometimes ',' is used as a decimal separator
 		ticks = ticks.replace(',', '.')
 
 		# Strip off non numbers and decimal places
-		ticks = "".join(n for n in ticks if n.isdigit() or n=='.').strip()
+		ticks = "".join(n for n in ticks if n.isdigit() or n == '.').strip()
 		if ticks == '':
 			ticks = '0'
 
 		# Add decimal if missing
 		if '.' not in ticks:
-			ticks = '{0}.0'.format(ticks)
+			ticks = f'{ticks}.0'
 
 		# Remove trailing zeros
 		ticks = ticks.rstrip('0')
 
 		# Add one trailing zero for empty right side
 		if ticks.endswith('.'):
-			ticks = '{0}0'.format(ticks)
+			ticks = f'{ticks}0'
 
 		# Make sure the number can be converted to a float
-		ticks = float(ticks)
-		ticks = '{0}'.format(ticks)
+		ticks = str(float(ticks))
 		return ticks
 	except Exception:
 		return '0.0'
@@ -462,7 +452,7 @@ def _hz_friendly_to_full(hz_string):
 			scale = 0
 
 		hz = "".join(n for n in hz_string if n.isdigit() or n=='.').strip()
-		if not '.' in hz:
+		if '.' not in hz:
 			hz += '.0'
 
 		hz, scale = _hz_short_to_full(hz, scale)
@@ -505,57 +495,53 @@ def _hz_short_to_friendly(ticks, scale):
 	except Exception:
 		return '0.0000 Hz'
 
+
+_to_friendly_bytes_formats = {
+	r"^[0-9]+B$" : 'B',
+	r"^[0-9]+K$" : 'KB',
+	r"^[0-9]+M$" : 'MB',
+	r"^[0-9]+G$" : 'GB'
+}
+
 def _to_friendly_bytes(input):
 	if not input:
 		return input
-	input = "{0}".format(input)
+	input = str(input)
 
-	formats = {
-		r"^[0-9]+B$" : 'B',
-		r"^[0-9]+K$" : 'KB',
-		r"^[0-9]+M$" : 'MB',
-		r"^[0-9]+G$" : 'GB'
-	}
-
-	for pattern, friendly_size in formats.items():
+	for pattern, friendly_size in _to_friendly_bytes_formats.items():
 		if re.match(pattern, input):
 			return "{0} {1}".format(input[ : -1].strip(), friendly_size)
 
 	return input
 
+_friendly_bytes_to_int_formats = [
+	('gib', 1024 * 1024 * 1024),
+	('mib', 1024 * 1024),
+	('kib', 1024),
+	('gb', 1024 * 1024 * 1024),
+	('mb', 1024 * 1024),
+	('kb', 1024),
+	('g', 1024 * 1024 * 1024),
+	('m', 1024 * 1024),
+	('k', 1024),
+	('b', 1),
+]
+
 def _friendly_bytes_to_int(friendly_bytes):
 	input = friendly_bytes.lower()
 
-	formats = [
-		{'gib' : 1024 * 1024 * 1024},
-		{'mib' : 1024 * 1024},
-		{'kib' : 1024},
-
-		{'gb' : 1024 * 1024 * 1024},
-		{'mb' : 1024 * 1024},
-		{'kb' : 1024},
-
-		{'g' : 1024 * 1024 * 1024},
-		{'m' : 1024 * 1024},
-		{'k' : 1024},
-		{'b' : 1},
-	]
-
 	try:
-		for entry in formats:
-			pattern = list(entry.keys())[0]
-			multiplier = list(entry.values())[0]
+		for pattern, multiplier in _friendly_bytes_to_int_formats:
 			if input.endswith(pattern):
-				return int(input.split(pattern)[0].strip()) * multiplier
-
-	except Exception as err:
+				return int(input.removesuffix(pattern).strip()) * multiplier
+	except Exception:
 		pass
 
 	return friendly_bytes
 
 def _parse_cpu_brand_string(cpu_string):
 	# Just return 0 if the processor brand does not have the Hz
-	if not 'hz' in cpu_string.lower():
+	if 'hz' not in cpu_string.lower():
 		return ('0.0', 0)
 
 	hz = cpu_string.lower()
@@ -643,7 +629,7 @@ def _parse_dmesg_output(output):
 		best_string = None
 		highest_count = 0
 		for cpu_string in cpu_strings:
-			count = sum([n is not None for n in cpu_string])
+			count = sum(n is not None for n in cpu_string)
 			if count > highest_count:
 				highest_count = count
 				best_string = cpu_string
@@ -662,8 +648,7 @@ def _parse_dmesg_output(output):
 			fields = [{n[0].strip().lower() : n[1].strip()} for n in fields]
 
 			for field in fields:
-				name = list(field.keys())[0]
-				value = list(field.values())[0]
+				(name, value), = field.items()
 
 				if name == 'origin':
 					vendor_id = value.strip('"')
@@ -683,8 +668,7 @@ def _parse_dmesg_output(output):
 		flags = []
 		for line in flag_lines:
 			line = line.split('<')[1].split('>')[0].lower()
-			for flag in line.split(','):
-				flags.append(flag)
+			flags.extend(line.split(','))
 		flags.sort()
 
 		# Convert from GHz/MHz string to Hz
@@ -1490,7 +1474,7 @@ def _get_cpu_info_from_cpuid_actual():
 		arch, bits = _parse_arch(DataSource.arch_string_raw)
 
 		# Return none if this is not an X86 CPU
-		if not arch in ['X86_32', 'X86_64']:
+		if arch not in ['X86_32', 'X86_64']:
 			trace.fail('Not running on X86_32 or X86_64. Skipping ...')
 			return trace.to_dict(info, True)
 
@@ -1536,7 +1520,7 @@ def _get_cpu_info_from_cpuid_actual():
 
 		info = _filter_dict_keys_with_empty_values(info)
 		trace.success()
-	except Exception as err:
+	except Exception:
 		err_string = traceback.format_exc()
 		trace._err = ''.join(['\t\t{0}\n'.format(n) for n in err_string.split('\n')]) + '\n'
 		return trace.to_dict(info, True)
@@ -1564,7 +1548,7 @@ def _get_cpu_info_from_cpuid():
 	arch, bits = _parse_arch(DataSource.arch_string_raw)
 
 	# Return {} if this is not an X86 CPU
-	if not arch in ['X86_32', 'X86_64']:
+	if arch not in ['X86_32', 'X86_64']:
 		g_trace.fail('Not running on X86_32 or X86_64. Skipping ...')
 		return {}
 
@@ -1916,8 +1900,8 @@ def _get_cpu_info_from_ibm_pa_features():
 
 		# Filter out invalid characters from output
 		value = output.split("ibm,pa-features")[1].lower()
-		value = [s for s in value if s in list('0123456789abcfed')]
-		value = ''.join(value)
+		_hex_chars = frozenset('0123456789abcdef')
+		value = ''.join(s for s in value if s in _hex_chars)
 
 		# Get data converted to Uint32 chunks
 		left = int(value[0 : 8], 16)
