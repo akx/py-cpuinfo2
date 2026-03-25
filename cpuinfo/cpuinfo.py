@@ -138,7 +138,8 @@ g_trace = Trace(is_active=False)
 class DataSource:
 	bits = platform.architecture()[0]
 	cpu_count = os.cpu_count()
-	is_windows = platform.system().lower() == 'windows'
+	_system_lower = platform.system().lower()
+	is_windows = _system_lower == 'windows'
 	arch_string_raw = platform.machine()
 	uname_string_raw = platform.uname()[5]
 	can_cpuid = True
@@ -153,8 +154,7 @@ class DataSource:
 
 	@staticmethod
 	def has_var_run_dmesg_boot():
-		uname = platform.system().strip().strip('"').strip("'").strip().lower()
-		return 'linux' in uname and os.path.exists('/var/run/dmesg.boot')
+		return 'linux' in DataSource._system_lower and os.path.exists('/var/run/dmesg.boot')
 
 	@staticmethod
 	def has_cpufreq_info():
@@ -178,9 +178,8 @@ class DataSource:
 
 	@staticmethod
 	def has_sysinfo():
-		uname = platform.system().strip().strip('"').strip("'").strip().lower()
-		is_beos = 'beos' in uname or 'haiku' in uname
-		return is_beos and shutil.which('sysinfo') is not None
+		system_lower = DataSource._system_lower
+		return ('beos' in system_lower or 'haiku' in system_lower) and shutil.which('sysinfo') is not None
 
 	@staticmethod
 	def has_lscpu():
