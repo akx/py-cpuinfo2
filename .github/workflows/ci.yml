@@ -24,8 +24,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         activate-environment: 'true'
     - run: |
-        uv pip install -e .
-        uv run test_suite.py
+        uv run pytest --cov
   build:
     name: Build distribution
     runs-on: ubuntu-latest
