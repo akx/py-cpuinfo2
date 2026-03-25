@@ -1,5 +1,49 @@
 [build-system]
-requires = [
-    "setuptools",
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "py-cpuinfo"
+dynamic = ["version"]
+description = "Get CPU info with pure Python"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { name = "Matthew Brennan Jones", email = "matthew.brennan.jones@gmail.com" },
 ]
-build-backend = "setuptools.build_meta"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
+
+[project.scripts]
+cpuinfo = "cpuinfo:main"
+
+[project.urls]
+Homepage = "https://github.com/workhorsy/py-cpuinfo"
+
+[tool.hatch.version]
+path = "cpuinfo/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/cpuinfo",
+    "/tests",
+    "ChangeLog",
+    "test_suite.py",
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+    "/cpuinfo",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-cov>=7.1.0",
+]
+

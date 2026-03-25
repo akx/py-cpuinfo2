@@ -1,5 +1,4 @@
-
-__pycache__
-*.pyc
+*.egg-info
 *.log
+*.py[cod]
 *.trace
