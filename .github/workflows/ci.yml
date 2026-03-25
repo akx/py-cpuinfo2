@@ -22,7 +22,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         activate-environment: 'true'
-    - run: uv run pytest --cov
+    - run: uv run --with=pytest-xdist pytest --cov --dist=worksteal -nlogical
       env:
         CPUINFO_REQUIRE_BITS: '64'
   test-x86:
@@ -38,7 +38,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         architecture: x86
     - uses: astral-sh/setup-uv@v7.6.0
-    - run: uv run --python python pytest --cov
+    - run: uv run --with=pytest-xdist --python python pytest --cov --dist=worksteal -nlogical
       env:
         CPUINFO_REQUIRE_BITS: '32'
   build:
