@@ -4,7 +4,6 @@ import sys
 
 from cpuinfo.cpuinfo import (
 	CPUINFO_VERSION_STRING,
-	_check_arch,
 	_configure_trace,
 	_get_cpu_info_from_cpuid_actual,
 	_get_cpu_info_internal,
@@ -56,12 +55,6 @@ def main():
 	if args.version:
 		print(CPUINFO_VERSION_STRING)
 		return
-
-	try:
-		_check_arch()
-	except Exception as err:
-		print(err, file=sys.stderr)
-		sys.exit(1)
 
 	info = _get_cpu_info_internal()
 

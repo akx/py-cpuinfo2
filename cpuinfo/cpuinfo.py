@@ -17,11 +17,9 @@ CPUINFO_VERSION = (10, 0, 0)
 CPUINFO_VERSION_STRING = '.'.join([str(n) for n in CPUINFO_VERSION])
 CAN_CALL_CPUID_IN_SUBPROCESS = True
 
-g_trace = None
-
 
 class Trace:
-	def __init__(self, is_active, is_stored_in_string):
+	def __init__(self, is_active, is_stored_in_string=False):
 		self._is_active = is_active
 		if not self._is_active:
 			return
@@ -133,6 +131,8 @@ class Trace:
 		'err' : self._err,
 		'is_fail' : is_fail
 		}
+
+g_trace = Trace(is_active=False)
 
 class DataSource:
 	bits = platform.architecture()[0]
@@ -2562,6 +2562,7 @@ def _get_cpu_info_internal():
 	Returns the CPU info by using the best sources of information for your OS.
 	Returns {} if nothing is found.
 	'''
+	_check_arch()
 
 	g_trace.write('!' * 80)
 
@@ -2654,6 +2655,3 @@ def _configure_trace(is_active):
 	global g_trace
 	g_trace = Trace(is_active, False)
 
-if __name__ != '__main__':
-	_configure_trace(False)
-	_check_arch()
