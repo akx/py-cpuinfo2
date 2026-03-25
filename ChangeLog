@@ -1,3 +1,10 @@
+2026-03-25 Release 10.1.0 (py-cpuinfo2)
+  * Optimization: `get_cpu_info()` doesn't involve a subprocess call anymore, making it ~12x faster.
+  * Optimization: `get_raw_hz()` no longer takes 1 second to run, but about 0.1.
+  * Optimization: other minor optimizations and increased use of standard library code.
+  * Minor possibly breaking change: The CLI entry point `cpuinfo.main()` is no longer exported.
+    A future version will further cut down on the names exported to the top level of the package.
+
 2026-03-25 Release 10.0.0 (py-cpuinfo2)
 	* Friendly fork published as py-cpuinfo2 on PyPI
 	* Modernized project metadata and build configuration

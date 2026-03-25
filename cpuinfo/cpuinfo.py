@@ -14,8 +14,8 @@ import sys
 import time
 import traceback
 
-CPUINFO_VERSION = (10, 0, 0)
-CPUINFO_VERSION_STRING = '.'.join([str(n) for n in CPUINFO_VERSION])
+CPUINFO_VERSION = (10, 1, 0)
+CPUINFO_VERSION_STRING = '10.1.0'
 CAN_CALL_CPUID_IN_SUBPROCESS = True
 
 
