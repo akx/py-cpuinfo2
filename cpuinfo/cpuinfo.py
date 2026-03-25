@@ -394,29 +394,28 @@ def _get_field(cant_be_number, raw_string, convert_to, default_value, *field_nam
 def _to_decimal_string(ticks):
 	try:
 		# Convert to string
-		ticks = '{0}'.format(ticks)
+		ticks = str(ticks)
 		# Sometimes ',' is used as a decimal separator
 		ticks = ticks.replace(',', '.')
 
 		# Strip off non numbers and decimal places
-		ticks = "".join(n for n in ticks if n.isdigit() or n=='.').strip()
+		ticks = "".join(n for n in ticks if n.isdigit() or n == '.').strip()
 		if ticks == '':
 			ticks = '0'
 
 		# Add decimal if missing
 		if '.' not in ticks:
-			ticks = '{0}.0'.format(ticks)
+			ticks = f'{ticks}.0'
 
 		# Remove trailing zeros
 		ticks = ticks.rstrip('0')
 
 		# Add one trailing zero for empty right side
 		if ticks.endswith('.'):
-			ticks = '{0}0'.format(ticks)
+			ticks = f'{ticks}0'
 
 		# Make sure the number can be converted to a float
-		ticks = float(ticks)
-		ticks = '{0}'.format(ticks)
+		ticks = str(float(ticks))
 		return ticks
 	except Exception:
 		return '0.0'
@@ -496,49 +495,45 @@ def _hz_short_to_friendly(ticks, scale):
 	except Exception:
 		return '0.0000 Hz'
 
+
+_to_friendly_bytes_formats = {
+	r"^[0-9]+B$" : 'B',
+	r"^[0-9]+K$" : 'KB',
+	r"^[0-9]+M$" : 'MB',
+	r"^[0-9]+G$" : 'GB'
+}
+
 def _to_friendly_bytes(input):
 	if not input:
 		return input
-	input = "{0}".format(input)
+	input = str(input)
 
-	formats = {
-		r"^[0-9]+B$" : 'B',
-		r"^[0-9]+K$" : 'KB',
-		r"^[0-9]+M$" : 'MB',
-		r"^[0-9]+G$" : 'GB'
-	}
-
-	for pattern, friendly_size in formats.items():
+	for pattern, friendly_size in _to_friendly_bytes_formats.items():
 		if re.match(pattern, input):
 			return "{0} {1}".format(input[ : -1].strip(), friendly_size)
 
 	return input
 
+_friendly_bytes_to_int_formats = [
+	('gib', 1024 * 1024 * 1024),
+	('mib', 1024 * 1024),
+	('kib', 1024),
+	('gb', 1024 * 1024 * 1024),
+	('mb', 1024 * 1024),
+	('kb', 1024),
+	('g', 1024 * 1024 * 1024),
+	('m', 1024 * 1024),
+	('k', 1024),
+	('b', 1),
+]
+
 def _friendly_bytes_to_int(friendly_bytes):
 	input = friendly_bytes.lower()
 
-	formats = [
-		{'gib' : 1024 * 1024 * 1024},
-		{'mib' : 1024 * 1024},
-		{'kib' : 1024},
-
-		{'gb' : 1024 * 1024 * 1024},
-		{'mb' : 1024 * 1024},
-		{'kb' : 1024},
-
-		{'g' : 1024 * 1024 * 1024},
-		{'m' : 1024 * 1024},
-		{'k' : 1024},
-		{'b' : 1},
-	]
-
 	try:
-		for entry in formats:
-			pattern = list(entry.keys())[0]
-			multiplier = list(entry.values())[0]
+		for pattern, multiplier in _friendly_bytes_to_int_formats:
 			if input.endswith(pattern):
-				return int(input.split(pattern)[0].strip()) * multiplier
-
+				return int(input.removesuffix(pattern).strip()) * multiplier
 	except Exception:
 		pass
 
