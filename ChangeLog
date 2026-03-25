@@ -1,3 +1,7 @@
+2026-03-25 Release 10.1.1 (py-cpuinfo2)
+  * Bugfix: CPUID works under PyInstaller again; now with tests to make sure it keeps working.
+  * Bugfix: subprocesses do not open windows on Windows.
+
 2026-03-25 Release 10.1.0 (py-cpuinfo2)
   * Optimization: `get_cpu_info()` doesn't involve a subprocess call anymore, making it ~12x faster.
   * Optimization: `get_raw_hz()` no longer takes 1 second to run, but about 0.1.

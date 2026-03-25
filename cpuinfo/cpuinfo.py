@@ -14,8 +14,8 @@ import sys
 import time
 import traceback
 
-CPUINFO_VERSION = (10, 1, 0)
-CPUINFO_VERSION_STRING = '10.1.0'
+CPUINFO_VERSION = (10, 1, 1)
+CPUINFO_VERSION_STRING = '10.1.1'
 CAN_CALL_CPUID_IN_SUBPROCESS = True
 
 
