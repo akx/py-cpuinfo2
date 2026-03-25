@@ -1463,6 +1463,10 @@ def _get_cpu_info_from_cpuid_actual():
 	It will safely call this function in another process.
 	'''
 
+	if fake_cpuid := os.environ.get('CPUINFO_TEST_FAKE_CPUID'):
+		import json  # noqa: PLC0415
+		return json.loads(fake_cpuid)
+
 	trace = Trace(True, True)
 	info = {}
 
@@ -1533,6 +1537,43 @@ def _get_cpu_info_from_cpuid_actual():
 
 	return trace.to_dict(info, False)
 
+
+def _mp_target_cpuid_actual(queue):
+	queue.put(_get_cpu_info_from_cpuid_actual())
+
+
+def _run_cpuid_in_subprocess():
+	'''
+	Run CPUID in an isolated process and return the output dict.
+	Returns None on failure.
+
+	Uses subprocess when running normally, and multiprocessing.Process
+	when running inside a frozen executable (PyInstaller, etc.) since
+	sys.executable is the frozen binary and cannot be used with -m.
+	'''
+	if getattr(sys, 'frozen', False):
+		import multiprocessing  # noqa: PLC0415
+
+		queue = multiprocessing.Queue()
+		proc = multiprocessing.Process(target=_mp_target_cpuid_actual, args=(queue,))
+		proc.start()
+		proc.join(timeout=10)
+		if proc.exitcode != 0 or queue.empty():
+			return None
+		return queue.get_nowait()
+
+	command = [sys.executable, "-m", "cpuinfo", '--internal-cpuid']
+	try:
+		kwargs = {}
+		if sys.platform == 'win32':
+			kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+		stdout = subprocess.check_output(command, stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kwargs)
+	except subprocess.CalledProcessError:
+		return None
+
+	import json  # noqa: PLC0415
+	return json.loads(stdout)
+
 def _get_cpu_info_from_cpuid():
 	'''
 	Returns the CPU info gathered by querying the X86 cpuid register in a new process.
@@ -1542,36 +1583,27 @@ def _get_cpu_info_from_cpuid():
 
 	g_trace.header('Tying to get info from CPUID ...')
 
-	# Return {} if can't cpuid
-	if not DataSource.can_cpuid:
-		g_trace.fail('Can\'t CPUID. Skipping ...')
-		return {}
+	fake_cpuid = os.environ.get('CPUINFO_TEST_FAKE_CPUID')
 
-	# Get the CPU arch and bits
-	arch, bits = _parse_arch(DataSource.arch_string_raw)
+	if not fake_cpuid:
+		# Return {} if can't cpuid
+		if not DataSource.can_cpuid:
+			g_trace.fail('Can\'t CPUID. Skipping ...')
+			return {}
 
-	# Return {} if this is not an X86 CPU
-	if arch not in ['X86_32', 'X86_64']:
-		g_trace.fail('Not running on X86_32 or X86_64. Skipping ...')
-		return {}
+		# Get the CPU arch and bits
+		arch, bits = _parse_arch(DataSource.arch_string_raw)
+
+		# Return {} if this is not an X86 CPU
+		if arch not in ['X86_32', 'X86_64']:
+			g_trace.fail('Not running on X86_32 or X86_64. Skipping ...')
+			return {}
 
 	try:
 		if CAN_CALL_CPUID_IN_SUBPROCESS:
-			# Run CPUID in a subprocess to isolate potential segfaults
-			
-
-			command = [sys.executable, "-m", "cpuinfo", '--internal-cpuid']
-			try:
-				kwargs = {}
-				if sys.platform == 'win32':
-					kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
-				stdout = subprocess.check_output(command, stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kwargs)
-			except subprocess.CalledProcessError:
-				g_trace.fail('Failed to run CPUID in process. Skipping ...')
+			output = _run_cpuid_in_subprocess()
+			if output is None:
 				return {}
-
-			import json  # noqa: PLC0415
-			output = json.loads(stdout)
 
 			if 'output' in output and output['output']:
 				g_trace.write(output['output'])
