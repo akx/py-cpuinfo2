@@ -2,10 +2,17 @@
 # Copyright (c) 2014-2022 Matthew Brennan Jones <matthew.brennan.jones@gmail.com>
 # Copyright (c) 2026 Aarni Koskela <akx@iki.fi>
 
-import os, sys
-import platform
-import multiprocessing
 import ctypes
+import datetime
+import inspect
+import io
+import os
+import platform
+import re
+import subprocess
+import sys
+import time
+import traceback
 
 CPUINFO_VERSION = (10, 0, 0)
 CPUINFO_VERSION_STRING = '.'.join([str(n) for n in CPUINFO_VERSION])
@@ -20,24 +27,20 @@ class Trace:
 		if not self._is_active:
 			return
 
-		from datetime import datetime
-		from io import StringIO
-
 		if is_stored_in_string:
-			self._output = StringIO()
+			self._output = io.StringIO()
 		else:
-			date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")
+			date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")
 			self._output = open('cpuinfo_trace_{0}.trace'.format(date), 'w')
 
-		self._stdout = StringIO()
-		self._stderr = StringIO()
+		self._stdout = io.StringIO()
+		self._stderr = io.StringIO()
 		self._err = None
 
 	def header(self, msg):
 		if not self._is_active: return
 
-		from inspect import stack
-		frame = stack()[1]
+		frame = inspect.stack()[1]
 		file = frame[1]
 		line = frame[2]
 		self._output.write("{0} ({1} {2})\n".format(msg, file, line))
@@ -46,8 +49,7 @@ class Trace:
 	def success(self):
 		if not self._is_active: return
 
-		from inspect import stack
-		frame = stack()[1]
+		frame = inspect.stack()[1]
 		file = frame[1]
 		line = frame[2]
 
@@ -57,8 +59,7 @@ class Trace:
 	def fail(self, msg):
 		if not self._is_active: return
 
-		from inspect import stack
-		frame = stack()[1]
+		frame = inspect.stack()[1]
 		file = frame[1]
 		line = frame[2]
 
@@ -69,8 +70,7 @@ class Trace:
 			self._output.write("Failed ... ({0} {1})\n\n".format(file, line))
 			self._output.flush()
 		elif isinstance(msg, Exception):
-			from traceback import format_exc
-			err_string = format_exc()
+			err_string = traceback.format_exc()
 			self._output.write("\tFailed ... ({0} {1})\n".format(file, line))
 			self._output.write(''.join(['\t\t{0}\n'.format(n) for n in err_string.split('\n')]) + '\n')
 			self._output.flush()
@@ -78,8 +78,7 @@ class Trace:
 	def command_header(self, msg):
 		if not self._is_active: return
 
-		from inspect import stack
-		frame = stack()[3]
+		frame = inspect.stack()[3]
 		file = frame[1]
 		line = frame[2]
 		self._output.write("\t{0} ({1} {2})\n".format(msg, file, line))
@@ -95,8 +94,7 @@ class Trace:
 	def keys(self, keys, info, new_info):
 		if not self._is_active: return
 
-		from inspect import stack
-		frame = stack()[2]
+		frame = inspect.stack()[2]
 		file = frame[1]
 		line = frame[2]
 
@@ -139,7 +137,7 @@ class Trace:
 
 class DataSource:
 	bits = platform.architecture()[0]
-	cpu_count = multiprocessing.cpu_count()
+	cpu_count = os.cpu_count()
 	is_windows = platform.system().lower() == 'windows'
 	arch_string_raw = platform.machine()
 	uname_string_raw = platform.uname()[5]
@@ -239,7 +237,7 @@ class DataSource:
 
 	@staticmethod
 	def ibm_pa_features():
-		import glob
+		import glob  # noqa: PLC0415
 
 		ibm_features = glob.glob('/proc/device-tree/cpus/*/ibm,pa-features')
 		if ibm_features:
@@ -290,17 +288,15 @@ def _program_paths(program_name):
 	return paths
 
 def _run_and_get_stdout(command, pipe_command=None):
-	from subprocess import Popen, PIPE
-
 	g_trace.command_header('Running command "' + ' '.join(command) + '" ...')
 
 	# Run the command normally
 	if not pipe_command:
-		p1 = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE)
+		p1 = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 	# Run the command and pipe it into another command
 	else:
-		p2 = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-		p1 = Popen(pipe_command, stdin=p2.stdout, stdout=PIPE, stderr=PIPE)
+		p2 = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+		p1 = subprocess.Popen(pipe_command, stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		p2.stdout.close()
 
 	# Get the stdout and stderr
@@ -319,10 +315,10 @@ def _read_windows_registry_key(key_name, field_name):
 	g_trace.command_header('Reading Registry key "{0}" field "{1}" ...'.format(key_name, field_name))
 
 	try:
-		import _winreg as winreg
+		import _winreg as winreg  # noqa: PLC0415
 	except ImportError as err:
 		try:
-			import winreg
+			import winreg  # noqa: PLC0415
 		except ImportError as err:
 			pass
 
@@ -517,8 +513,6 @@ def _hz_short_to_friendly(ticks, scale):
 		return '0.0000 Hz'
 
 def _to_friendly_bytes(input):
-	import re
-
 	if not input:
 		return input
 	input = "{0}".format(input)
@@ -589,8 +583,6 @@ def _parse_cpu_brand_string(cpu_string):
 	return (hz, scale)
 
 def _parse_cpu_brand_string_dx(cpu_string):
-	import re
-
 	# Find all the strings inside brackets ()
 	starts = [m.start() for m in re.finditer(r"\(", cpu_string)]
 	ends = [m.start() for m in re.finditer(r"\)", cpu_string)]
@@ -736,8 +728,6 @@ def _parse_dmesg_output(output):
 	return {}
 
 def _parse_arch(arch_string_raw):
-	import re
-
 	arch, bits = None, None
 	arch_string_raw = arch_string_raw.lower()
 
@@ -925,7 +915,7 @@ class ASM:
 			if not res:
 				raise Exception("Failed FlushInstructionCache")
 		else:
-			from mmap import mmap, MAP_PRIVATE, MAP_ANONYMOUS, PROT_WRITE, PROT_READ, PROT_EXEC
+			from mmap import MAP_ANONYMOUS, MAP_PRIVATE, PROT_EXEC, PROT_READ, PROT_WRITE, mmap  # noqa: PLC0415
 
 			# Allocate a private and executable memory segment the size of the machine code
 			machine_code = bytes.join(b'', self.machine_code)
@@ -1474,12 +1464,10 @@ class CPUID:
 		return retval
 
 	def get_raw_hz(self):
-		from time import sleep
-
 		ticks_fn = self.get_ticks_func()
 
 		start = ticks_fn.func()
-		sleep(1)
+		time.sleep(1)
 		end = ticks_fn.func()
 
 		ticks = (end - start)
@@ -1493,8 +1481,6 @@ def _get_cpu_info_from_cpuid_actual():
 	Do not call it directly. Use the _get_cpu_info_from_cpuid function instead.
 	It will safely call this function in another process.
 	'''
-
-	from io import StringIO
 
 	trace = Trace(True, True)
 	info = {}
@@ -1557,8 +1543,7 @@ def _get_cpu_info_from_cpuid_actual():
 		info = _filter_dict_keys_with_empty_values(info)
 		trace.success()
 	except Exception as err:
-		from traceback import format_exc
-		err_string = format_exc()
+		err_string = traceback.format_exc()
 		trace._err = ''.join(['\t\t{0}\n'.format(n) for n in err_string.split('\n')]) + '\n'
 		return trace.to_dict(info, True)
 	finally:
@@ -1592,16 +1577,16 @@ def _get_cpu_info_from_cpuid():
 	try:
 		if CAN_CALL_CPUID_IN_SUBPROCESS:
 			# Run CPUID in a subprocess to isolate potential segfaults
-			import json
-			from subprocess import check_output, DEVNULL, CalledProcessError
+			
 
-			command = [sys.executable, __file__, '--internal-cpuid']
+			command = [sys.executable, "-m", "cpuinfo", '--internal-cpuid']
 			try:
-				stdout = check_output(command, stdin=DEVNULL, stderr=DEVNULL)
-			except CalledProcessError:
+				stdout = subprocess.check_output(command, stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+			except subprocess.CalledProcessError:
 				g_trace.fail('Failed to run CPUID in process. Skipping ...')
 				return {}
 
+			import json  # noqa: PLC0415
 			output = json.loads(stdout)
 
 			if 'output' in output and output['output']:
@@ -2660,7 +2645,7 @@ def get_cpu_info_json():
 	Returns the result in a json string
 	'''
 
-	import json
+	import json  # noqa: PLC0415
 	return json.dumps(_get_cpu_info_internal())
 
 def get_cpu_info():
@@ -2671,72 +2656,10 @@ def get_cpu_info():
 
 	return _get_cpu_info_internal()
 
-def main():
-	from argparse import ArgumentParser, SUPPRESS
-	import json
-
-	# Parse args
-	parser = ArgumentParser(description='Gets CPU info with pure Python')
-	parser.add_argument('--json', action='store_true', help='Return the info in JSON format')
-	parser.add_argument('--version', action='store_true', help='Return the version of py-cpuinfo')
-	parser.add_argument('--trace', action='store_true', help='Traces code paths used to find CPU info to file')
-	parser.add_argument('--internal-cpuid', action='store_true', help=SUPPRESS)
-	args = parser.parse_args()
-
+def _configure_trace(is_active):
 	global g_trace
-	g_trace = Trace(args.trace, False)
+	g_trace = Trace(is_active, False)
 
-	# Internal: run CPUID in isolation and return JSON result
-	if args.internal_cpuid:
-		output = _get_cpu_info_from_cpuid_actual()
-		print(json.dumps(output))
-		return
-
-	try:
-		_check_arch()
-	except Exception as err:
-		sys.stderr.write(str(err) + "\n")
-		sys.exit(1)
-
-	info = _get_cpu_info_internal()
-
-	if not info:
-		sys.stderr.write("Failed to find cpu info\n")
-		sys.exit(1)
-
-	if args.json:
-		print(json.dumps(info))
-	elif args.version:
-		print(CPUINFO_VERSION_STRING)
-	else:
-		print('Python Version: {0}'.format(info.get('python_version', '')))
-		print('Cpuinfo Version: {0}'.format(info.get('cpuinfo_version_string', '')))
-		print('Vendor ID Raw: {0}'.format(info.get('vendor_id_raw', '')))
-		print('Hardware Raw: {0}'.format(info.get('hardware_raw', '')))
-		print('Brand Raw: {0}'.format(info.get('brand_raw', '')))
-		print('Hz Advertised Friendly: {0}'.format(info.get('hz_advertised_friendly', '')))
-		print('Hz Actual Friendly: {0}'.format(info.get('hz_actual_friendly', '')))
-		print('Hz Advertised: {0}'.format(info.get('hz_advertised', '')))
-		print('Hz Actual: {0}'.format(info.get('hz_actual', '')))
-		print('Arch: {0}'.format(info.get('arch', '')))
-		print('Bits: {0}'.format(info.get('bits', '')))
-		print('Count: {0}'.format(info.get('count', '')))
-		print('Arch String Raw: {0}'.format(info.get('arch_string_raw', '')))
-		print('L1 Data Cache Size: {0}'.format(info.get('l1_data_cache_size', '')))
-		print('L1 Instruction Cache Size: {0}'.format(info.get('l1_instruction_cache_size', '')))
-		print('L2 Cache Size: {0}'.format(info.get('l2_cache_size', '')))
-		print('L2 Cache Line Size: {0}'.format(info.get('l2_cache_line_size', '')))
-		print('L2 Cache Associativity: {0}'.format(info.get('l2_cache_associativity', '')))
-		print('L3 Cache Size: {0}'.format(info.get('l3_cache_size', '')))
-		print('Stepping: {0}'.format(info.get('stepping', '')))
-		print('Model: {0}'.format(info.get('model', '')))
-		print('Family: {0}'.format(info.get('family', '')))
-		print('Processor Type: {0}'.format(info.get('processor_type', '')))
-		print('Flags: {0}'.format(', '.join(info.get('flags', ''))))
-
-
-if __name__ == '__main__':
-	main()
-else:
-	g_trace = Trace(False, False)
+if __name__ != '__main__':
+	_configure_trace(False)
 	_check_arch()

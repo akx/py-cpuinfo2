@@ -2,20 +2,15 @@ import json
 import os
 import re
 import sys
-from subprocess import PIPE, Popen
+import subprocess
 
 from cpuinfo import cpuinfo
 
+COMMAND = (sys.executable, '-m', 'cpuinfo')
+
 
 def test_json():
-	command = [sys.executable, 'cpuinfo/cpuinfo.py', '--json']
-	p1 = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-	output = p1.communicate()[0]
-
-	assert p1.returncode == 0
-
-	output = output.decode(encoding='UTF-8')
-
+	output = subprocess.check_output([*COMMAND, '--json'], encoding="utf-8")
 	info = json.loads(output, object_hook=cpuinfo._utf_to_str)
 
 	assert list(cpuinfo.CPUINFO_VERSION) == info['cpuinfo_version']
@@ -23,15 +18,7 @@ def test_json():
 
 
 def test_version():
-	command = [sys.executable, 'cpuinfo/cpuinfo.py', '--version']
-	p1 = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-	output = p1.communicate()[0]
-
-	assert p1.returncode == 0
-
-	output = output.decode(encoding='UTF-8')
-	output = output.strip()
-
+	output = subprocess.check_output([*COMMAND, '--version'], encoding="utf-8").strip()
 	assert output == cpuinfo.CPUINFO_VERSION_STRING
 
 
@@ -45,10 +32,7 @@ def test_trace():
 	# print('\n', before_log_files)
 
 	# Run with trace to generate new log file
-	command = [sys.executable, 'cpuinfo/cpuinfo.py', '--trace']
-	p1 = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-	output = p1.communicate()[0]
-	assert p1.returncode == 0
+	output = subprocess.check_output([*COMMAND, '--trace'], encoding="utf-8")
 
 	# Get all log files after test
 	after_log_files = [
@@ -72,14 +56,7 @@ def test_trace():
 
 
 def test_default():
-	command = [sys.executable, 'cpuinfo/cpuinfo.py']
-	p1 = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-	output = p1.communicate()[0]
-
-	assert p1.returncode == 0
-
-	output = output.decode(encoding='UTF-8')
-
+	output = subprocess.check_output(COMMAND, encoding="utf-8")
 	version = output.split('Cpuinfo Version: ')[1].split('\n')[0].strip()
 
 	assert version == cpuinfo.CPUINFO_VERSION_STRING
