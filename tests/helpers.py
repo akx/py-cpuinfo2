@@ -2,7 +2,10 @@
 # Copyright (c) 2014-2022 Matthew Brennan Jones <matthew.brennan.jones@gmail.com>
 # Copyright (c) 2026 Aarni Koskela <akx@iki.fi>
 
+import itertools
 import platform
+import time
+from unittest.mock import Mock
 
 
 class EmptyDataSource:
@@ -168,9 +171,13 @@ def monkey_patch_cpuid(cpuinfo, return_hz, return_values, monkeypatch):
 
 	monkeypatch.setattr(cpuinfo.CPUID, '_run_asm', MockCPUID.__dict__['_run_asm'])
 	monkeypatch.setattr(cpuinfo.CPUID, '_asm_func', MockCPUID.__dict__['_asm_func'])
+	# TODO: this doesn't feel like a great patch
+	monkeypatch.setattr(time, 'monotonic', Mock(side_effect=itertools.cycle([0.0, 1.0])))
 
 
 def monkey_patch_asm(cpuinfo, NewASM, monkeypatch):
 	monkeypatch.setattr(cpuinfo.ASM, 'compile', NewASM.__dict__['compile'])
 	monkeypatch.setattr(cpuinfo.ASM, 'run', NewASM.__dict__['run'])
 	monkeypatch.setattr(cpuinfo.ASM, 'free', NewASM.__dict__['free'])
+	# TODO: this doesn't feel like a great patch
+	monkeypatch.setattr(time, 'monotonic', Mock(side_effect=itertools.cycle([0.0, 1.0])))

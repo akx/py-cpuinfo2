@@ -1466,14 +1466,15 @@ class CPUID:
 	def get_raw_hz(self):
 		ticks_fn = self.get_ticks_func()
 
+		t0 = time.monotonic()
 		start = ticks_fn.func()
-		time.sleep(1)
+		time.sleep(0.1)
 		end = ticks_fn.func()
+		t1 = time.monotonic()
 
-		ticks = (end - start)
 		ticks_fn.free()
 
-		return ticks
+		return int((end - start) / (t1 - t0))
 
 def _get_cpu_info_from_cpuid_actual():
 	'''
