@@ -196,7 +196,7 @@ class DataSource:
 
 	@staticmethod
 	def cat_proc_cpuinfo():
-		return _run_and_get_stdout(['cat', '/proc/cpuinfo'])
+		return _read_file('/proc/cpuinfo')
 
 	@staticmethod
 	def cpufreq_info():
@@ -212,7 +212,7 @@ class DataSource:
 
 	@staticmethod
 	def cat_var_run_dmesg_boot():
-		return _run_and_get_stdout(['cat', '/var/run/dmesg.boot'])
+		return _read_file('/var/run/dmesg.boot')
 
 	@staticmethod
 	def sysctl_machdep_cpu_hw_cpufrequency():
@@ -292,6 +292,17 @@ def _run_and_get_stdout(command):
 	g_trace.command_output('return code:', str(result.returncode))
 	g_trace.command_output('stdout:', result.stdout)
 	return result.returncode, result.stdout
+
+def _read_file(path):
+	g_trace.command_header(f'Reading file {path}')
+	try:
+		with open(path, 'r', encoding='UTF-8', errors='replace') as f:
+			content = f.read()
+		g_trace.command_output('length:', str(len(content)))
+		return 0, content
+	except Exception as e:
+		g_trace.command_output('error:', str(e))
+		return 1, ''
 
 def _read_windows_registry_key(key_name, field_name):
 	g_trace.command_header('Reading Registry key "{0}" field "{1}" ...'.format(key_name, field_name))
