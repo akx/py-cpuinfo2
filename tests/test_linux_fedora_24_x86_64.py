@@ -443,11 +443,6 @@ def _setup(monkeypatch):
 	helpers.monkey_patch_data_source(cpuinfo, MockDataSource, monkeypatch)
 
 
-'''
-Make sure calls return the expected number of fields.
-'''
-
-
 def test_returns():
 	assert len(cpuinfo._get_cpu_info_from_registry()) == 0
 	assert len(cpuinfo._get_cpu_info_from_cpufreq_info()) == 0
