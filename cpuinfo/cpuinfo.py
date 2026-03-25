@@ -284,7 +284,7 @@ def _run_and_get_stdout(command):
 def _read_file(path):
 	g_trace.command_header(f'Reading file {path}')
 	try:
-		with open(path, 'r', encoding='UTF-8', errors='replace') as f:
+		with open(path, encoding='UTF-8', errors='replace') as f:
 			content = f.read()
 		g_trace.command_output('length:', str(len(content)))
 		return 0, content
@@ -297,10 +297,10 @@ def _read_windows_registry_key(key_name, field_name):
 
 	try:
 		import _winreg as winreg  # noqa: PLC0415
-	except ImportError as err:
+	except ImportError:
 		try:
 			import winreg  # noqa: PLC0415
-		except ImportError as err:
+		except ImportError:
 			pass
 
 	key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
@@ -312,7 +312,7 @@ def _read_windows_registry_key(key_name, field_name):
 # Make sure we are running on a supported system
 def _check_arch():
 	arch, bits = _parse_arch(DataSource.arch_string_raw)
-	if not arch in ['ARM_7', 'ARM_8',
+	if arch not in ['ARM_7', 'ARM_8',
 	                'LOONG_32', 'LOONG_64',
 	                'MIPS_32', 'MIPS_64',
 	                'PPC_32', 'PPC_64',
@@ -450,7 +450,7 @@ def _hz_friendly_to_full(hz_string):
 			scale = 0
 
 		hz = "".join(n for n in hz_string if n.isdigit() or n=='.').strip()
-		if not '.' in hz:
+		if '.' not in hz:
 			hz += '.0'
 
 		hz, scale = _hz_short_to_full(hz, scale)
@@ -536,14 +536,14 @@ def _friendly_bytes_to_int(friendly_bytes):
 			if input.endswith(pattern):
 				return int(input.split(pattern)[0].strip()) * multiplier
 
-	except Exception as err:
+	except Exception:
 		pass
 
 	return friendly_bytes
 
 def _parse_cpu_brand_string(cpu_string):
 	# Just return 0 if the processor brand does not have the Hz
-	if not 'hz' in cpu_string.lower():
+	if 'hz' not in cpu_string.lower():
 		return ('0.0', 0)
 
 	hz = cpu_string.lower()
@@ -1478,7 +1478,7 @@ def _get_cpu_info_from_cpuid_actual():
 		arch, bits = _parse_arch(DataSource.arch_string_raw)
 
 		# Return none if this is not an X86 CPU
-		if not arch in ['X86_32', 'X86_64']:
+		if arch not in ['X86_32', 'X86_64']:
 			trace.fail('Not running on X86_32 or X86_64. Skipping ...')
 			return trace.to_dict(info, True)
 
@@ -1524,7 +1524,7 @@ def _get_cpu_info_from_cpuid_actual():
 
 		info = _filter_dict_keys_with_empty_values(info)
 		trace.success()
-	except Exception as err:
+	except Exception:
 		err_string = traceback.format_exc()
 		trace._err = ''.join(['\t\t{0}\n'.format(n) for n in err_string.split('\n')]) + '\n'
 		return trace.to_dict(info, True)
@@ -1552,7 +1552,7 @@ def _get_cpu_info_from_cpuid():
 	arch, bits = _parse_arch(DataSource.arch_string_raw)
 
 	# Return {} if this is not an X86 CPU
-	if not arch in ['X86_32', 'X86_64']:
+	if arch not in ['X86_32', 'X86_64']:
 		g_trace.fail('Not running on X86_32 or X86_64. Skipping ...')
 		return {}
 
