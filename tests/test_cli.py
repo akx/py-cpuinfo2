@@ -10,7 +10,7 @@ COMMAND = (sys.executable, '-m', 'cpuinfo')
 
 
 def test_json():
-	output = subprocess.check_output([*COMMAND, '--json'], encoding="utf-8")
+	output = subprocess.check_output([*COMMAND, '--json'], encoding="utf-8", timeout=60)
 	info = json.loads(output, object_hook=cpuinfo._utf_to_str)
 
 	assert list(cpuinfo.CPUINFO_VERSION) == info['cpuinfo_version']
@@ -18,7 +18,7 @@ def test_json():
 
 
 def test_version():
-	output = subprocess.check_output([*COMMAND, '--version'], encoding="utf-8").strip()
+	output = subprocess.check_output([*COMMAND, '--version'], encoding="utf-8", timeout=60).strip()
 	assert output == cpuinfo.CPUINFO_VERSION_STRING
 
 
@@ -32,7 +32,7 @@ def test_trace():
 	# print('\n', before_log_files)
 
 	# Run with trace to generate new log file
-	output = subprocess.check_output([*COMMAND, '--trace'], encoding="utf-8")
+	output = subprocess.check_output([*COMMAND, '--trace'], encoding="utf-8", timeout=60)
 
 	# Get all log files after test
 	after_log_files = [
@@ -56,7 +56,7 @@ def test_trace():
 
 
 def test_default():
-	output = subprocess.check_output(COMMAND, encoding="utf-8")
+	output = subprocess.check_output(COMMAND, encoding="utf-8", timeout=60)
 	version = output.split('Cpuinfo Version: ')[1].split('\n')[0].strip()
 
 	assert version == cpuinfo.CPUINFO_VERSION_STRING

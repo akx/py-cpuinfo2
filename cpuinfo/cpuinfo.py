@@ -17,6 +17,7 @@ import traceback
 CPUINFO_VERSION = (10, 1, 1)
 CPUINFO_VERSION_STRING = '10.1.1'
 CAN_CALL_CPUID_IN_SUBPROCESS = True
+SUBPROCESS_TIMEOUT = 20
 
 
 class Trace:
@@ -278,7 +279,11 @@ def _run_and_get_stdout(command):
 	kwargs = {}
 	if sys.platform == 'win32':
 		kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
-	result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, text=True, **kwargs)
+	try:
+		result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, text=True, timeout=SUBPROCESS_TIMEOUT, **kwargs)
+	except subprocess.TimeoutExpired:
+		g_trace.command_output('error:', 'timeout')
+		return 1, ''
 	g_trace.command_output('return code:', str(result.returncode))
 	g_trace.command_output('stdout:', result.stdout)
 	return result.returncode, result.stdout
@@ -1567,8 +1572,8 @@ def _run_cpuid_in_subprocess():
 		kwargs = {}
 		if sys.platform == 'win32':
 			kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
-		stdout = subprocess.check_output(command, stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kwargs)
-	except subprocess.CalledProcessError:
+		stdout = subprocess.check_output(command, stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=SUBPROCESS_TIMEOUT, **kwargs)
+	except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
 		return None
 
 	import json  # noqa: PLC0415
