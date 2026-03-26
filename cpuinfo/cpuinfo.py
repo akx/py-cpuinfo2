@@ -216,7 +216,7 @@ class DataSource:
 
 	@staticmethod
 	def sysctl_machdep_cpu_hw_cpufrequency():
-		return _run_and_get_stdout(['sysctl', 'machdep.cpu', 'hw.cpufrequency'])
+		return _run_and_get_stdout(['sysctl', 'machdep.cpu', 'hw.cpufrequency', 'hw.l1icachesize', 'hw.l1dcachesize', 'hw.l2cachesize', 'hw.cachelinesize', 'hw.optional'])
 
 	@staticmethod
 	def isainfo_vb():
@@ -2060,6 +2060,21 @@ def _get_cpu_info_from_cat_var_run_dmesg_boot():
 	return info
 
 
+def _get_sysctl_hw_optional_flags(output):
+	'''
+	Extracts CPU feature flags from hw.optional.* sysctl output.
+	Returns a sorted list of lowercase flag names for features whose value is 1.
+	'''
+	flags = []
+	for line in output.splitlines():
+		key, _, value = line.partition(':')
+		key = key.strip()
+		value = value.strip()
+		if not key.startswith('hw.optional.') or value != '1':
+			continue
+		flags.append(key.removeprefix('hw.optional.').removeprefix('arm.').lower())
+	return flags
+
 def _get_cpu_info_from_sysctl():
 	'''
 	Returns the CPU info gathered from sysctl.
@@ -2088,16 +2103,25 @@ def _get_cpu_info_from_sysctl():
 		model = _get_field(False, output, int, 0, 'machdep.cpu.model')
 		family = _get_field(False, output, int, 0, 'machdep.cpu.family')
 
-		# Flags
+		# Flags from machdep.cpu (Intel)
 		flags = _get_field(False, output, None, '', 'machdep.cpu.features').lower().split()
 		flags.extend(_get_field(False, output, None, '', 'machdep.cpu.leaf7_features').lower().split())
 		flags.extend(_get_field(False, output, None, '', 'machdep.cpu.extfeatures').lower().split())
+
+		# Flags from hw.optional (ARM and others)
+		flags.extend(_get_sysctl_hw_optional_flags(output))
 		flags.sort()
 
 		# Convert from GHz/MHz string to Hz
 		hz_advertised, scale = _parse_cpu_brand_string(processor_brand)
 		hz_actual = _get_field(False, output, None, None, 'hw.cpufrequency')
 		hz_actual = _to_decimal_string(hz_actual)
+
+		# Cache sizes from hw.* (bytes, available on ARM Macs and some BSDs)
+		l1_data_cache_size = _get_field(False, output, int, 0, 'hw.l1dcachesize')
+		l1_instruction_cache_size = _get_field(False, output, int, 0, 'hw.l1icachesize')
+		l2_cache_size_hw = _get_field(False, output, int, 0, 'hw.l2cachesize')
+		l2_cache_line_size = _get_field(False, output, int, 0, 'hw.cachelinesize')
 
 		info = {
 		'vendor_id_raw' : vendor_id,
@@ -2108,7 +2132,10 @@ def _get_cpu_info_from_sysctl():
 		'hz_advertised' : _hz_short_to_full(hz_advertised, scale),
 		'hz_actual' : _hz_short_to_full(hz_actual, 0),
 
-		'l2_cache_size' : int(cache_size) * 1024,
+		'l2_cache_size' : l2_cache_size_hw or (int(cache_size) * 1024),
+		'l2_cache_line_size' : l2_cache_line_size,
+		'l1_data_cache_size' : l1_data_cache_size,
+		'l1_instruction_cache_size' : l1_instruction_cache_size,
 
 		'stepping' : stepping,
 		'model' : model,
