@@ -573,7 +573,7 @@ def _parse_cpu_brand_string_dx(cpu_string):
 	# Find all the strings inside brackets ()
 	starts = [m.start() for m in re.finditer(r"\(", cpu_string)]
 	ends = [m.start() for m in re.finditer(r"\)", cpu_string)]
-	insides = {k: v for k, v in zip(starts, ends)}
+	insides = dict(zip(starts, ends))
 	insides = [cpu_string[start+1 : end] for start, end in insides.items()]
 
 	# Find all the fields
