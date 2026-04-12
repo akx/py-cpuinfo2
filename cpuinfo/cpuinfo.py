@@ -841,7 +841,7 @@ def _filter_dict_keys_with_empty_values(info, acceptable_values = {}):
 			continue
 
 		# Filter out strings that start with "0.0"
-		if type(value) == str and value.startswith('0.0'):
+		if isinstance(value, str) and value.startswith('0.0'):
 			continue
 
 		filtered_info[key] = value
