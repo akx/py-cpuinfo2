@@ -1,8 +1,8 @@
 import json
 import os
 import re
-import sys
 import subprocess
+import sys
 
 from cpuinfo import cpuinfo
 

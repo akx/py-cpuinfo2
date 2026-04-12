@@ -4,11 +4,12 @@
 # Copyright (c) 2014-2022 Matthew Brennan Jones <matthew.brennan.jones@gmail.com>
 
 
-import os, sys
 import glob
-import platform
 import multiprocessing
+import os
+import platform
 import subprocess
+import sys
 
 try:
 	import _winreg as winreg
@@ -25,7 +26,7 @@ out_file = open(out_file_name, 'w')
 
 
 def run_and_get_stdout(command, pipe_command=None):
-	from subprocess import Popen, PIPE
+	from subprocess import PIPE, Popen
 
 	if not pipe_command:
 		p1 = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE)
@@ -329,7 +330,7 @@ class ASM:
 			if not res:
 				raise Exception("Failed FlushInstructionCache")
 		else:
-			from mmap import mmap, MAP_PRIVATE, MAP_ANONYMOUS, PROT_WRITE, PROT_READ, PROT_EXEC
+			from mmap import MAP_ANONYMOUS, MAP_PRIVATE, PROT_EXEC, PROT_READ, PROT_WRITE, mmap
 
 			# Allocate a private and executable memory segment the size of the machine code
 			machine_code = bytes.join(b'', self.machine_code)
