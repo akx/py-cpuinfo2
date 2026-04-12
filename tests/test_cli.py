@@ -43,7 +43,7 @@ def test_trace():
 	# print('\n', after_log_files)
 
 	# Read the new log file into a string
-	new_log_file = list(set(after_log_files) - set(before_log_files))[0]
+	new_log_file = next(iter(set(after_log_files) - set(before_log_files)))
 	with open(new_log_file) as f:
 		output = f.read().strip()
 
