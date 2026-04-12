@@ -668,10 +668,11 @@ def _parse_dmesg_output(output):
 					family = int(value.lstrip('0x'), 16)
 
 		# Features
-		flag_lines = []
-		for category in ['  Features=', '  Features2=', '  AMD Features=', '  AMD Features2=']:
-			if category in output:
-				flag_lines.append(output.split(category)[1].split('\n')[0])
+		flag_lines = [
+			output.split(category)[1].split('\n')[0]
+			for category in ['  Features=', '  Features2=', '  AMD Features=', '  AMD Features2=']
+			if category in output
+		]
 
 		flags = []
 		for line in flag_lines:
@@ -983,10 +984,11 @@ class CPUID:
 		)
 
 		# Each 4bits is a ascii letter in the name
-		vendor_id = []
-		for reg in [ebx, edx, ecx]:
-			for n in [0, 8, 16, 24]:
-				vendor_id.append(chr((reg >> n) & 0xFF))
+		vendor_id = [
+			chr((reg >> n) & 0xFF)
+			for reg in [ebx, edx, ecx]
+			for n in [0, 8, 16, 24]
+		]
 		vendor_id = ''.join(vendor_id)
 
 		return vendor_id
