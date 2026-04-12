@@ -1610,20 +1610,20 @@ def _get_cpu_info_from_cpuid():
 			if output is None:
 				return {}
 
-			if 'output' in output and output['output']:
+			if output.get('output'):
 				g_trace.write(output['output'])
 
 			if 'is_fail' not in output:
 				g_trace.fail('Failed to get is_fail from CPUID process. Skipping ...')
 				return {}
 
-			if 'err' in output and output['err']:
+			if output.get('err'):
 				g_trace.fail('Failed to run CPUID in process. Skipping ...')
 				g_trace.write(output['err'])
 				g_trace.write('Failed ...')
 				return {}
 
-			if 'is_fail' in output and output['is_fail']:
+			if output.get('is_fail'):
 				g_trace.write('Failed ...')
 				return {}
 
