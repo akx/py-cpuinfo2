@@ -12,10 +12,10 @@ from subprocess import Popen, PIPE
 
 try:
 	import _winreg as winreg
-except ImportError as err:
+except ImportError:
 	try:
 		import winreg
-	except ImportError as err:
+	except ImportError:
 		pass
 
 is_windows = platform.system().lower() == 'windows'
