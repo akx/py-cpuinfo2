@@ -823,10 +823,9 @@ def _filter_dict_keys_with_empty_values(info, acceptable_values = {}):
 		value = info[key]
 
 		# Keep if value is acceptable
-		if key in acceptable_values:
-			if acceptable_values[key] == value:
-				filtered_info[key] = value
-				continue
+		if key in acceptable_values and acceptable_values[key] == value:
+			filtered_info[key] = value
+			continue
 
 		# Filter out None, 0, "", (), {}, []
 		if not value:
