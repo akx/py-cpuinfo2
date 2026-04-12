@@ -590,7 +590,7 @@ def get_cpu_info_from_cpuid():
 	# Just return if not X86
 	arch_string_raw = platform.machine()
 	arch, bits = parse_arch(arch_string_raw)
-	if not arch in ['X86_32', 'X86_64']:
+	if arch not in ['X86_32', 'X86_64']:
 		return {}
 
 	# FIXME: Return none if SE Linux is in enforcing mode
