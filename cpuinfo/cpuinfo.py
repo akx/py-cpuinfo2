@@ -628,10 +628,10 @@ def _parse_dmesg_output(output):
 				output.split('\nCPU0:')[1:] + \
 				output.split('\nCPU1:')[1:] + \
 				output.split('\nCPU:')[1:]
-		lines = [l.split('\n')[0].strip() for l in lines]
+		lines = [line.split('\n')[0].strip() for line in lines]
 
 		# Convert the lines to CPU strings
-		cpu_strings = [_parse_cpu_brand_string_dx(l) for l in lines]
+		cpu_strings = [_parse_cpu_brand_string_dx(line) for line in lines]
 
 		# Find the CPU string that has the most fields
 		best_string = None
