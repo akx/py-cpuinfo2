@@ -798,10 +798,7 @@ def _is_selinux_enforcing(trace):
 	for line in output.splitlines():
 		line = line.strip().lower()
 		if line.startswith("current mode:"):
-			if line.endswith("enforcing"):
-				return True
-			else:
-				return False
+			return line.endswith("enforcing")
 
 	# Figure out if we can execute heap and execute memory
 	can_selinux_exec_heap = False
