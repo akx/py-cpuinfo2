@@ -9,6 +9,13 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    name: Lint with Prek
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7.6.0
+      - uses: j178/prek-action@v2
   test:
     name: Python Tests
     strategy:
